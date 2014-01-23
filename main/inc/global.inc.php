@@ -444,6 +444,8 @@ $_plugins = isset($_SESSION['_plugins']) ? $_SESSION['_plugins'] : null;
 
 if (!isset($_setting)) {
     api_set_settings_and_plugins();
+    $_setting = isset($_SESSION['_setting']) ? $_SESSION['_setting'] : null;
+    $_plugins = isset($_SESSION['_plugins']) ? $_SESSION['_plugins'] : null;
 } else {
     if (isset($_setting['settings_latest_update']) && $_setting['settings_latest_update'] != $settings_latest_update) {
         api_set_settings_and_plugins();

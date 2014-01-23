@@ -94,7 +94,7 @@ class sso {
             //error_log('user exists');
             $uData = Database::fetch_array($result);
             //Check the user's password
-            if ($uData['auth_source'] == PLATFORM_AUTH_SOURCE) {
+            if ($uData['auth_source'] == PLATFORM_AUTH_SOURCE ) {
              
                 //the authentification of this user is managed by Chamilo itself
                 // check the user's password
