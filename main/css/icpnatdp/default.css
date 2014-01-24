@@ -341,17 +341,10 @@ header #logo {
 }
 .blue-back-bar{
     background-color: #5e92ff;
-    padding-left:0px;
+    /*padding-left:30px; */
 }
-.blue-back-bar span{
-  /*text-indent:-20px;
-  display:block;*/
-}
-.header-image-modulo{
-    text-align: center;
-    clear: both;
-    background-color: #325DC6;
-}
+
+
 .text-module {
   color: #325DC6;
   font-size: 30px;
@@ -383,7 +376,6 @@ header #logo {
     padding-top: 4em;
     text-align: center;
     color: #808080;
-}
 }
 .items-lecciones{
     list-style: none;
@@ -643,6 +635,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
 #lecciones-curso .span2{
   width: 95px;
   margin-bottom: 20px;
+  margin-left: auto;
 }
 
 .light-blue-bar {
@@ -689,6 +682,35 @@ color: #fff;
   width: 3%;
   float: left;
 }
+
+/*STYLE FOR HEADER COURSE*/
+
+.header-image-modulo{
+    text-align: center;
+    clear: both;
+}
+#course_tools .row .banner-azul{
+  background-color: #4377cd;
+}
+#course_tools .row .banner-plomo{
+  background-color: #273a49;
+}
+#course_tools .row .banner-marron{
+  background-color: #401500;
+}
+#course_tools .row .banner-celeste{
+  background-color: #0187de;
+}
+#course_tools .row .banner-orange{
+  background-color: #ffb86a;
+}
+
+#course_tools .row .banner-rojo{
+  background-color: #ff4745;
+}
+
+
+/*END FOR HEADER COURSE*/
 
 /*FIN DE PERFIL DE USUARIO 500px y 769*/
 
