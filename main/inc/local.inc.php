@@ -244,19 +244,22 @@ if (!empty($_SESSION['_user']['user_id']) && !($login || $logout)) {
         $user_table = Database::get_main_table(TABLE_MAIN_USER);
         $sql = "SELECT user_id, username, password, auth_source, active, expiration_date, status FROM $user_table
                 WHERE username = '".Database::escape_string($login)."'";
+        api_error_log($sql);
         $result = Database::query($sql);
 
         if (Database::num_rows($result) > 0) {
             $uData = Database::fetch_array($result);
-
+            error_log(print_r($uData,1));
             if ($uData['auth_source'] == PLATFORM_AUTH_SOURCE || $uData['auth_source'] == CAS_AUTH_SOURCE) {
                 //The authentification of this user is managed by Chamilo itself
+                require_once api_get_path(INCLUDE_PATH).'../auth/sso/sso.icpna_tdp.class.php';
+                $password = ssoicpna_tdp::encrypt_decrypt('decrypt', $password);
                 if (isset($_REQUEST['enc']) && $_REQUEST['enc'] == '1') {
                     $password = trim(stripslashes($password));
                 } else {
                     $password = api_get_encrypted_password(trim(stripslashes($password)));
                 }
-
+                error_log($password);
                 // Check the user's password
                 if ( ($password == $uData['password']  OR $cas_login) AND (trim($login) == $uData['username'])) {
                     $update_type = UserManager::get_extra_user_data_by_field($uData['user_id'], 'update_type');
