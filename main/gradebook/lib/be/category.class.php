@@ -462,7 +462,28 @@ class Category implements GradebookItem
                             $params['session_id']       = api_get_session_id();
                             $params['course_code']      = $this->get_course_code();
 
-                            $gradebook->save($params);
+                            $gradebook_id = $gradebook->save($params);
+
+                            $count_elements = intval($component['count_elements']);
+                            $exclude_elements = intval($component['exclusions']);
+                            $eval_weight = round(abs($params['weight'] / ($count_elements - $exclude_elements)));
+
+                            for ($i = 1; $i <= $count_elements; $i++) {
+                                $eval = new Evaluation();
+                                $eval->set_name($component['prefix'] . $i);
+                                $eval->set_description(get_lang('CreatedByModelX'));
+                                $eval->set_user_id($params['user_id']);
+
+                                //Always add the gradebook to the course
+                                $eval->set_course_code($params['course_code']);
+                                $eval->set_category_id($gradebook_id);
+
+                                $eval->set_weight($eval_weight);
+                                $eval->set_max($params['weight']);
+
+                                $eval->set_visible(1);
+                                $eval->add();
+                            }
                         }
                     }
                 }
@@ -546,7 +567,28 @@ class Category implements GradebookItem
                         $params['session_id']       = api_get_session_id();
                         $params['course_code']      = $this->get_course_code();
 
-                        $gradebook->save($params);
+                        $gradebook_id = $gradebook->save($params);
+
+                        $count_elements = intval($component['count_elements']);
+                        $exclude_elements = intval($component['exclusions']);
+                        $eval_weight = round(abs($params['weight'] / ($count_elements - $exclude_elements)));
+
+                        for ($i = 1; $i <= $count_elements; $i++) {
+                            $eval = new Evaluation();
+                            $eval->set_name($component['prefix'] . $i);
+                            $eval->set_description(get_lang('CreatedByModelX'));
+                            $eval->set_user_id($params['user_id']);
+
+                            //Always add the gradebook to the course
+                            $eval->set_course_code($params['course_code']);
+                            $eval->set_category_id($gradebook_id);
+
+                            $eval->set_weight($eval_weight);
+                            $eval->set_max($params['weight']);
+
+                            $eval->set_visible(1);
+                            $eval->add();
+                        }
                     }
                 }
             }
