@@ -100,14 +100,14 @@ class GradeModel extends Model {
         $renderer = & $form->defaultRenderer();
         
         $component_array = array();
-        
+
         for ($i = 0; $i <= $max;  $i++) {
             $counter = $i;
-            $form->addElement('text', 'components['.$i.'][percentage]', null, array('class' => 'span1'));                                        
+            $form->addElement('text', 'components['.$i.'][percentage]', null, array('class' => 'span1'));
             $form->addElement('text', 'components['.$i.'][acronym]',    null, array('class' => 'span1', 'placeholder' => get_lang('Acronym')));
-            $form->addElement('text', 'components['.$i.'][title]',      null, array('class' => 'span2', 'placeholder' => get_lang('Title')));            
+            $form->addElement('text', 'components['.$i.'][title]',      null, array('class' => 'span2', 'placeholder' => get_lang('Description')));
             $form->addElement('text', 'components['.$i.'][prefix]',      null, array('class'=> 'span1', 'placeholder' => get_lang('Prefix')));
-            
+
             $options = array(0=>0, 1 => 1, 2 => 2, 3=>3, 4=> 4, 5=> 5);
             $form->addElement('select', 'components['.$i.'][count_elements]', null, $options);
             
@@ -130,7 +130,7 @@ class GradeModel extends Model {
             {element} {label} <!-- BEGIN error --><span class="form_error">{error}</span> <!-- END error -->';
 
             $template_title =
-            '&nbsp{element} <!-- BEGIN error --> <span class="form_error">{error}</span><!-- END error -->
+            ' '. get_lang('QuantityToExclude') .'&nbsp {element} <!-- BEGIN error --> <span class="form_error">{error}</span><!-- END error -->
              <a href="javascript:plusItem(' . ($counter+1) . ')">
                 <img style="display: '.(($counter>=$nr_items)?'inline':'none').';" id="plus-' . ($counter+1) . '" src="../img/icons/22/add.png" alt="'.get_lang('Add').'" title="'.get_lang('Add').'"></img>
             </a>
@@ -138,14 +138,18 @@ class GradeModel extends Model {
                 <img style="display: '.(($counter>=$nr_items)?'inline':'none').';" id="min-' . $counter . '" src="../img/delete.png" alt="'.get_lang('Delete').'" title="'.get_lang('Delete').'"></img>
             </a>            
             </div></p></div>';
-            
+
+            $template_count_elements =
+                '<!-- BEGIN required --> '. get_lang('Quantity') .
+                '&nbsp {element} {label} <!-- BEGIN error --><span class="form_error">{error}</span> <!-- END error -->';
+
             $renderer->setElementTemplate($template_acronym, 'components['.$i.'][title]');
             $renderer->setElementTemplate($template_percentage ,  'components['.$i.'][percentage]');
             $renderer->setElementTemplate($template_acronym , 'components['.$i.'][acronym]');
             
             $renderer->setElementTemplate($template_acronym , 'components['.$i.'][prefix]');
             $renderer->setElementTemplate($template_title , 'components['.$i.'][exclusions]');
-            $renderer->setElementTemplate($template_acronym , 'components['.$i.'][count_elements]');
+            $renderer->setElementTemplate($template_count_elements , 'components['.$i.'][count_elements]');
             
             if ($i == 0) {
                 $form->addRule('components['.$i.'][percentage]', get_lang('ThisFieldIsRequired'), 'required');

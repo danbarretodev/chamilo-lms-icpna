@@ -1673,4 +1673,7 @@ $SpaceUsedOnSystemCannotBeMeasuredOnWindows = "The space used on disk cannot be 
 $XOldTablesDeleted = "%d old tables deleted";
 $XOldDatabasesDeleted = "%d old databases deleted";
 $ExtensionShouldBeLoaded = "This extension should be loaded.";
+$QuantityToExclude = "Quantity to exclude";
+$Prefix = "Prefix";
+$Acronym = "Acronym";
 ?>

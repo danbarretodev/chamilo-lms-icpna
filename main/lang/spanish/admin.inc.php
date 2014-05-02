@@ -1714,4 +1714,7 @@ $SincroServer = "Servidor global de sincronización";
 $SincroClient = "Servidor local de institución";
 $URLIP = "URL/Dirección IP";
 $SentSincroClientData = "Enviar información";
+$QuantityToExclude = "Cantidad a excluir";
+$Prefix = "Prefijo";
+$Acronym = "Acrónimo";
 ?>
