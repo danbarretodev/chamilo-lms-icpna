@@ -253,7 +253,7 @@ function build_edit_icons_cat($cat, $selectcat)
                 //$modify_icons .= '&nbsp;<img src="../img/deplacer_fichier_na.gif" border="0" title="' . get_lang('Move') . '" alt="" />';
             }
 
-            if ($cat->is_locked() && !api_is_platform_admin()) {
+            if (($cat->is_locked() || (!empty($grade_model_id) && $grade_model_id !== -1)) && !api_is_platform_admin()) {
                 $modify_icons .= Display::return_icon('delete_na.png', get_lang('DeleteAll'), '', ICON_SIZE_SMALL);
             } else {
                 $modify_icons .= '&nbsp;<a href="' . api_get_self() . '?deletecat=' . $cat->get_id() . '&amp;selectcat=' . $selectcat . '&amp;cidReq=' . $cat->get_course_code() . '" onclick="return confirmation();">' . Display::return_icon('delete.png', get_lang('DeleteAll'), '', ICON_SIZE_SMALL) . '</a>';
@@ -273,8 +273,9 @@ function build_edit_icons_eval($eval, $selectcat) {
     $status = CourseManager::get_user_in_course_status(api_get_user_id(), api_get_course_id());
     $is_locked = $eval->is_locked();
     $eval->get_course_code();
-    $cat = new Category();
+    $cat = current(Category::load($selectcat));
     $message_eval = $cat->show_message_resource_delete($eval->get_course_code());
+    $grade_model_id = $cat->get_grade_model_id();
 
     if ($message_eval === false && api_is_allowed_to_edit(null, true)) {
         $visibility_icon = ($eval->is_visible() == 0) ? 'invisible' : 'visible';
@@ -300,7 +301,7 @@ function build_edit_icons_eval($eval, $selectcat) {
           $modify_icons .= '&nbsp;<img src="../img/locked_na.png" border="0" title="' . get_lang('TheEvaluationIsLocked') . '" alt="" />';
           }
           } */
-        if ($is_locked && !api_is_platform_admin()) {
+        if (($cat->is_locked() || (!empty($grade_model_id) && $grade_model_id !== -1)) && !api_is_platform_admin()) {
             $modify_icons .= '&nbsp;' . Display::return_icon('delete_na.png', get_lang('Delete'), '', ICON_SIZE_SMALL);
         } else {
             $modify_icons .= '&nbsp;<a href="' . api_get_self() . '?deleteeval=' . $eval->get_id() . '&selectcat=' . $selectcat . ' &amp;cidReq=' . $eval->get_course_code() . '" onclick="return confirmation();">' . Display::return_icon('delete.png', get_lang('Delete'), '', ICON_SIZE_SMALL) . '</a>';
@@ -315,10 +316,10 @@ function build_edit_icons_eval($eval, $selectcat) {
  * @param int $selectcat id of selected category
  */
 function build_edit_icons_link($link, $selectcat) {
-    $cat = new Category();
+    $cat = current(Category::load($selectcat));
     $message_link = $cat->show_message_resource_delete($link->get_course_code());
     $is_locked = $link->is_locked();
-
+    $grade_model_id = $cat->get_grade_model_id();
     $modify_icons = null;
 
     if (!api_is_allowed_to_edit(null, true)) {
@@ -342,7 +343,7 @@ function build_edit_icons_link($link, $selectcat) {
 
         //If a work is added in a gradebook you can only delete the link in the work tool
 
-        if ($is_locked && !api_is_platform_admin()) {
+        if ($is_locked || (!empty($grade_model_id) && $grade_model_id !== -1) && !api_is_platform_admin()) {
             $modify_icons .= '&nbsp;' . Display::return_icon('delete_na.png', get_lang('Delete'), '', ICON_SIZE_SMALL);
         } else {
             $modify_icons .= '&nbsp;<a href="' . api_get_self() . '?deletelink=' . $link->get_id() . '&selectcat=' . $selectcat . ' &amp;cidReq=' . $link->get_course_code() . '" onclick="return confirmation();">' . Display::return_icon('delete.png', get_lang('Delete'), '', ICON_SIZE_SMALL) . '</a>';
