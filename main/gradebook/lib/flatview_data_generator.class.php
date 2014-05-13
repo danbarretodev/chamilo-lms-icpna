@@ -324,7 +324,7 @@ class FlatViewDataGenerator
                     $item_value     = $score[0]/$divide*$main_weight;
 
                     //Fixing total when using one or multiple gradebooks
-                    $percentage     = $sub_cat->get_weight()/($sub_cat_percentage) * $sub_cat_percentage/$this->category->get_weight();
+                    $percentage     = $sub_cat->get_weight()/$this->category->get_weight();
                     $item_value     = $percentage*$item_value;
                     $item_total        += $sub_cat->get_weight();
 
@@ -352,8 +352,10 @@ class FlatViewDataGenerator
                            $row[] = $temp_score;
                         }
                     }
-                    $item_value_total +=$item_value;
+                    $weights[$sub_cat->get_name()] = $divide;
+                    $args[$sub_cat->get_name()] = $score[0];
                 }
+                $result = $this->category->exec_formula($args, $weights, 0);
                 if ($convert_using_the_global_weight) {
                     //$item_total = $main_weight;
                 }
@@ -363,18 +365,20 @@ class FlatViewDataGenerator
                     $score             = $item->calc_score($user_id);
                     $real_score        = $score;
                     $divide            = ( ($score[1])==0 ) ? 1 : $score[1];
- 
+
                     //sub cat weight
                     $sub_cat_percentage = $sum_categories_weight_array[$item->get_category_id()];
 
-                    $item_value     = $score[0]/$divide;
+                    $item_value     = $score[0]/$divide*$item->get_weight();
 
+                    /*
                     //Fixing total when using one or multiple gradebooks
                     if ($this->category->get_parent_id() == 0 ) {
                         $item_value     = $score[0]/$divide*$item->get_weight();
                     } else {
                         $item_value     = $item_value*$item->get_weight();
                     }
+                    */
 
                     $item_total     += $item->get_weight();
                     /*
@@ -385,11 +389,12 @@ class FlatViewDataGenerator
                     //if (true)
                     if (api_get_setting('gradebook_show_percentage_in_reports') == 'false') {
                         $real_score = $scoredisplay->display_score($real_score, SCORE_SIMPLE);
-                        $temp_score = $scoredisplay->display_score(array($item_value, null), SCORE_DIV_SIMPLE_WITH_CUSTOM);
+                        $temp_score = $scoredisplay->display_score($score, SCORE_DIV_SIMPLE_WITH_CUSTOM);
                         $temp_score = Display::tip($real_score, $temp_score);
                     } else {
-                        $temp_score     = $scoredisplay->display_score($real_score, SCORE_DIV_PERCENT_WITH_CUSTOM);
-                        $temp_score = Display::tip($temp_score, $complete_score);
+                        $real_score = $scoredisplay->display_score($real_score, SCORE_DIV_PERCENT, SCORE_ONLY_SCORE);
+                        $temp_score = $scoredisplay->display_score($score, SCORE_DIV_SIMPLE_WITH_CUSTOM);
+                        $temp_score = Display::tip($temp_score, $real_score);
                     }
 
                     if (!isset($this->params['only_total_category']) || (isset($this->params['only_total_category']) && $this->params['only_total_category'] == false)) {
@@ -408,17 +413,18 @@ class FlatViewDataGenerator
                            $row[] = $temp_score;
                         }
                     }
-                    $item_value_total +=$item_value;
+                    $weights[$item->get_name()] = $divide;
+                    $args[$item->get_name()] = $score[0];
                 }
-                $item_total = $main_weight;
+                $result = $this->category->exec_formula($args, $weights, 1);
             }
-            $total_score = array($item_value_total, $item_total);
+            $total_score = array($result[0], $result[1]);
 
             if (!$show_all) {
                 if ($export_to_pdf) {
                     $row['total'] = $scoredisplay->display_score($total_score);
                 } else {
-                   $row[] = $scoredisplay->display_score($total_score);
+                    $row[] = $scoredisplay->display_score($total_score);
                 }
             } else {
                 if ($export_to_pdf) {

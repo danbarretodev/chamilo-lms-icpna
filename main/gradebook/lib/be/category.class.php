@@ -764,6 +764,8 @@ class Category implements GradebookItem
         }
 
         // calculate score
+        $args = array();
+        $weights = array();
         $rescount     = 0;
         $ressum       = 0;
         $weightsum    = 0;
@@ -774,9 +776,11 @@ class Category implements GradebookItem
                 if ($cat->get_weight() != 0) {
                     $catweight = $cat->get_weight();
                     $rescount++;
+                    $weights[$cat->get_name()] = $catweight;
                     $weightsum += $catweight;
                 }
                 if (isset($catres)) {
+                    $args[$cat->get_name()]= (($catres[0]/$catres[1]) * $catweight);
                     $ressum += (($catres[0]/$catres[1]) * $catweight);
                 }
             }
@@ -788,7 +792,9 @@ class Category implements GradebookItem
                 if (isset($evalres) && $eval->get_weight() != 0) {
                     $evalweight = $eval->get_weight();
                     $rescount++;
+                    $weights[$eval->get_name()] = $evalweight;
                     $weightsum += $evalweight;
+                    $args[$eval->get_name()] = (($evalres[0]/$evalres[1]) * $evalweight);
                     $ressum += (($evalres[0]/$evalres[1]) * $evalweight);
                 } else {
 
@@ -800,28 +806,71 @@ class Category implements GradebookItem
             foreach ($links as $link) {
                 $linkres = $link->calc_score($stud_id);
                 //if ($debug) var_dump($linkres);
-
                 if (isset($linkres) && $link->get_weight() != 0) {
                     $linkweight     = $link->get_weight();
                     $link_res_denom = ($linkres[1]==0) ? 1 : $linkres[1];
                     $rescount++;
+                    $weights[$link->get_name()] = $linkweight;
                     $weightsum += $linkweight;
+                    $args[$link->get_name()] = (($linkres[0]/$link_res_denom) * $linkweight);
                     $ressum += (($linkres[0]/$link_res_denom) * $linkweight);
                 } else {
                     //adding if result does not exists
                     if ($link->get_weight() != 0) {
                         $linkweight     = $link->get_weight();
+                        $weights[$link->get_name()] = $linkweight;
                         $weightsum += $linkweight;
                     }
                 }
             }
         }
 
+        $result = $this->exec_formula($args, $weights, 1);
+        $ressum = $result[0];
+        $weightsum = $result[1];
         if ($rescount == 0) {
             return null;
         } else {
             return array ($ressum, $weightsum);
         }
+    }
+
+    public function exec_formula (array $args, array $weights = null, $mode = 0) {
+        $result = array(0,0);
+        $grade_model_id = $this->get_grade_model_id();
+        if ($this->get_grade_model_id() != 0 && $mode > 3) {
+            foreach ($args as &$arg) {
+                $arg = floatval($arg);
+            }
+            $grade_method_table = Database::get_main_table(TABLE_GRADE_MODEL_METHOD);
+            $grade_component_table = Database::get_main_table(TABLE_GRADE_MODEL_COMPONENTS);
+            $sql = "SELECT formula, weight FROM $grade_method_table AS g_met
+            INNER JOIN $grade_component_table AS g_com
+            ON g_com.id = g_met.grade_components_id
+            WHERE g_com.grade_model_id = $grade_model_id
+            LIMIT 1";
+            $res = Database::query($sql);
+            $code = current(Database::fetch_row($res));
+            $result[0] = eval($code[0]);
+            $result[1] = eval($code[1]);
+        } elseif ($mode == 1) {
+            arsort($args);
+            foreach ($args as $key => $arg) {
+                $result[0] += $arg;
+                $result[1] += $weights[$key];
+                if ($result[1] >= floatval($this->get_weight())) {
+                    break;
+                }
+            }
+        } elseif ($mode == 0) {
+            foreach ($args as $arg) {
+                $result[0] += floatval($arg);
+            }
+            foreach ($weights as $weight) {
+                $result[1] += floatval($weight);
+            }
+        }
+        return $result;
     }
 
     /**

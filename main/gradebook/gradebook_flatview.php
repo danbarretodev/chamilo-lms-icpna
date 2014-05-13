@@ -197,7 +197,7 @@ if (isset($_GET['isStudentView']) && $_GET['isStudentView'] == 'false') {
 	DisplayGradebook :: display_header_reduce_flatview($cat[0], $showeval, $showlink, $simple_search_form);
 	
 	// main graph
-	$flatviewtable->display();	
+	$flatviewtable->display();
 	// @todo this needs a fix
 	//$image_file = $flatviewtable->display_graph();
 	//@todo load images with jquery

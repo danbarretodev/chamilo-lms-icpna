@@ -339,7 +339,7 @@ class ScoreDisplay
         if ($this->coloring_enabled && $no_color == false) {
             $my_score_denom = ($score[1]==0)?1:$score[1];
             if (($score[0] / $my_score_denom) < ($this->color_split_value / 100)) {
-                $display = Display::tag('font', $display, array('color'=>'red'));
+                $display = Display::div($display, array('style'=>'color: red;'));
                 //$display = Display::label($display, 'important');
             }
         }
