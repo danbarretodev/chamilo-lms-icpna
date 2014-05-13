@@ -744,7 +744,9 @@ class Category implements GradebookItem
 
     /**
      * Calculate the score of this category
-     * @param $stud_id student id (default: all students - then the average is returned)
+     * @param int $stud_id student id (default: all students - then the average is returned)
+     * @param string $course_code course code (optional)
+     * @param int $session_id (optional)
      * @return    array (score sum, weight sum)
      *             or null if no scores available
      */
@@ -1282,7 +1284,7 @@ class Category implements GradebookItem
      * @param int      $stud_id student id (default: all students)
      * @param string   Course code (optional)
      * @param int      Session ID (optional)
-     *
+     * @param string   Sentence to order in SQL (optional)
      * @return array   Array of subcategories
      */
     public function get_subcategories($stud_id = null, $course_code = null, $session_id = null, $order = null)
