@@ -355,7 +355,7 @@ class FlatViewDataGenerator
                     $weights[$sub_cat->get_name()] = $divide;
                     $args[$sub_cat->get_name()] = $score[0];
                 }
-                $result = $this->category->exec_formula($args, $weights, 0);
+                $result = $this->category->exec_formula($args, $weights, 2);
                 if ($convert_using_the_global_weight) {
                     //$item_total = $main_weight;
                 }
@@ -416,7 +416,7 @@ class FlatViewDataGenerator
                     $weights[$item->get_name()] = $divide;
                     $args[$item->get_name()] = $score[0];
                 }
-                $result = $this->category->exec_formula($args, $weights, 1);
+                $result = $this->category->exec_formula($args, $weights, 2);
             }
             $total_score = array($result[0], $result[1]);
 

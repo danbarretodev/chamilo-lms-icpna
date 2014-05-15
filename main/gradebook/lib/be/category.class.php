@@ -825,7 +825,7 @@ class Category implements GradebookItem
             }
         }
 
-        $result = $this->exec_formula($args, $weights, 1);
+        $result = $this->exec_formula($args, $weights, 2);
         $ressum = $result[0];
         $weightsum = $result[1];
         if ($rescount == 0) {
@@ -853,6 +853,15 @@ class Category implements GradebookItem
             $code = current(Database::fetch_row($res));
             $result[0] = eval($code[0]);
             $result[1] = eval($code[1]);
+        } elseif ($mode == 2) {
+            foreach ($args as $key => $arg) {
+                $result[0] += $arg;
+                $result[1] += $weights[$key];
+            }
+            if ($result[1] > $this->get_weight()) {
+                $result[0] = $result[0] * $this->get_weight() / $result[1];
+                $result[1] = $this->get_weight();
+            }
         } elseif ($mode == 1) {
             arsort($args);
             foreach ($args as $key => $arg) {
