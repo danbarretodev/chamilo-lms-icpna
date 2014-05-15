@@ -342,6 +342,9 @@ define('TABLE_TIMELINE',                    'timeline');
 //Gradebook model
 define('TABLE_GRADE_MODEL',                  'grade_model');
 define('TABLE_GRADE_MODEL_COMPONENTS',       'grade_components');
+define('TABLE_GRADE_ABSTRACT_MODEL',         'grade_abstract_model');
+define('TABLE_GRADE_SCORE_DISPLAY_TEMPLATE', 'grade_score_display_template');
+define('TABLE_GRADE_COMPONENTS_TEMPLATE',    'grade_components_template');
 
 define('TABLE_BRANCH_SYNC',                  'branch_sync');
 define('TABLE_BRANCH_SYNC_LOG',              'branch_sync_log');

@@ -47,8 +47,13 @@ class ScoreDisplay
     public static function instance($category_id = 0)
     {
         static $instance;
+        if ($category_id == 0) {
+            $category_id = intval($_REQUEST['selectcat']);
+        }
         if (!isset ($instance)) {
             $instance = new ScoreDisplay($category_id);
+        } else {
+            $instance->change_category_id($category_id);
         }
 
         return $instance;
@@ -140,14 +145,14 @@ class ScoreDisplay
         if (api_get_setting('teachers_can_change_score_settings') == 'true') {
             //Load course settings
             if ($this->custom_enabled) {
-                $this->custom_display = $this->get_custom_displays();
+                $this->custom_display = $this->get_custom_displays($category_id);
                 if (count($this->custom_display)> 0) {
                     $this->custom_display_conv = $this->convert_displays($this->custom_display);
                 }
             }
 
             if ($this->coloring_enabled) {
-                $this->color_split_value = $this->get_score_color_percent();
+                $this->color_split_value = $this->get_score_color_percent($category_id);
             }
         }
     }
@@ -480,19 +485,43 @@ class ScoreDisplay
      */
     private function get_score_color_percent($category_id = null)
     {
+        $tbl_category = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
         $tbl_display = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_SCORE_DISPLAY);
+        $tbl_template = Database :: get_main_table(TABLE_GRADE_SCORE_DISPLAY_TEMPLATE);
+        $tbl_components_template = Database :: get_main_table(TABLE_GRADE_COMPONENTS_TEMPLATE);
         if (isset($category_id)) {
             $category_id = intval($category_id);
         } else {
             $category_id = $this->get_current_gradebook_category_id();
         }
-
-        $sql = 'SELECT score_color_percent FROM '.$tbl_display.' WHERE category_id = '.$category_id.' LIMIT 1';
+        $sql = 'SELECT tpl.score_color_percent
+            FROM '.$tbl_template.' AS tpl
+            INNER JOIN '.$tbl_components_template.'AS ctpl
+            ON ctpl.grade_score_display_template_id = tpl.id
+            INNER JOIN '.$tbl_category.' AS cat
+            ON cat.grade_components_id = ctpl.grade_components_id
+            WHERE cat.id = '.$category_id.' ORDER BY score';
         $result = Database::query($sql);
         $score = 0;
         if (Database::num_rows($result) > 0) {
-            $row = Database::fetch_row($result);
-            $score = $row[0];
+            if (Database::num_rows($result) > 0) {
+                $row = Database::fetch_row($result);
+                $score = $row[0];
+            }
+        } else {
+            $sql = 'SELECT score_color_percent FROM '.$tbl_display.' WHERE category_id = '.$category_id.' ORDER BY score';
+            $result = Database::query($sql);
+            if (Database::num_rows($result) > 0) {
+                $row = Database::fetch_row($result);
+                $score = $row[0];
+            } else {
+                $sql = 'SELECT score_color_percent FROM '.$tbl_display.' WHERE category_id = '.$this->get_current_gradebook_category_id().' ORDER BY score';
+                $result = Database::query($sql);
+                if (Database::num_rows($result) > 0) {
+                    $row = Database::fetch_row($result);
+                    $score = $row[0];
+                }
+            }
         }
         return $score;
     }
@@ -504,15 +533,36 @@ class ScoreDisplay
      */
     private function get_custom_displays($category_id = null)
     {
+        $tbl_category = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
         $tbl_display = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_SCORE_DISPLAY);
+        $tbl_template = Database :: get_main_table(TABLE_GRADE_SCORE_DISPLAY_TEMPLATE);
+        $tbl_components_template = Database :: get_main_table(TABLE_GRADE_COMPONENTS_TEMPLATE);
         if (isset($category_id)) {
             $category_id = intval($category_id);
         } else {
             $category_id = $this->get_current_gradebook_category_id();
         }
-        $sql = 'SELECT * FROM '.$tbl_display.' WHERE category_id = '.$category_id.' ORDER BY score';
+        $sql = 'SELECT tpl.id, tpl.score, tpl.display, tpl.score_color_percent
+            FROM '.$tbl_template.' AS tpl
+            INNER JOIN '.$tbl_components_template.'AS ctpl
+            ON ctpl.grade_score_display_template_id = tpl.id
+            INNER JOIN '.$tbl_category.' AS cat
+            ON cat.grade_components_id = ctpl.grade_components_id
+            WHERE cat.id = '.$category_id.' ORDER BY score';
         $result = Database::query($sql);
-        return Database::store_result($result,'ASSOC');
+        if (Database::num_rows($result) > 0) {
+            return Database::store_result($result,'ASSOC');
+        } else {
+            $sql = 'SELECT * FROM '.$tbl_display.' WHERE category_id = '.$category_id.' ORDER BY score';
+            $result = Database::query($sql);
+            if (Database::num_rows($result) > 0) {
+                return Database::store_result($result,'ASSOC');
+            } else {
+                $sql = 'SELECT * FROM '.$tbl_display.' WHERE category_id = '.$this->get_current_gradebook_category_id().' ORDER BY score';
+                $result = Database::query($sql);
+                return Database::store_result($result,'ASSOC');
+            }
+        }
     }
 
     /**
@@ -564,6 +614,20 @@ class ScoreDisplay
             return 0;
         } else {
             return ($item1['score'] < $item2['score'] ? -1 : 1);
+        }
+    }
+    private function reset_category_id() {
+        $this->category_id = $this->get_current_gradebook_category_id();
+    }
+
+    private function set_category_id($category_id) {
+        $this->category_id = intval($category_id);
+    }
+    private function change_category_id($category_id, $can_reset = false) {
+        if (!empty($category_id)) {
+            $this->set_category_id($category_id);
+        } elseif ($can_reset) {
+            $this->reset_category_id();
         }
     }
 }
