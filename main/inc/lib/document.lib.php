@@ -3230,5 +3230,33 @@ class DocumentManager {
         );
         return $system_folders;
     }
+
+    /**
+     * @param string $courseCode
+     * @return string 'visible' or 'invisible' string
+     */
+    public static function getDocumentDefaultVisibility($courseCode)
+    {
+        $settings = api_get_setting('tool_visible_by_default_at_creation');
+
+        $defaultVisibility = 'visible';
+
+        if (isset($settings['documents'])) {
+            $portalDefaultVisibility =  'invisible';
+            if ($settings['documents'] == 'true') {
+                $portalDefaultVisibility = 'visible';
+            }
+
+            $defaultVisibility = $portalDefaultVisibility;
+        }
+
+        if (api_get_setting('documents_default_visibility_defined_in_course') == 'true') {
+            $courseVisibility = api_get_course_setting('documents_default_visibility', $courseCode);
+            if (!empty($courseVisibility) && in_array($courseVisibility, array('visible', 'invisible'))) {
+                $defaultVisibility = $courseVisibility;
+            }
+        }
+        return $defaultVisibility;
+    }
 }
 //end class DocumentManager
