@@ -172,16 +172,18 @@ class FlatViewTable extends SortableTable
         $header_name = $this->datagen->get_header_names();
         $total_users = $this->datagen->get_total_users_count();
         $img_file = '';
-
-        if ($this->datagen->get_total_items_count() > 0 && $total_users > 0) {
+        $total_item_count = $this->datagen->get_total_items_count();
+        if ($total_item_count > 0 && $total_users > 0) {
             //Removing first name
             array_shift($header_name);
             //Removing last name
             array_shift($header_name);
 
             $displayscore = ScoreDisplay :: instance();
-            $customdisplays = $displayscore->get_custom_score_display_settings();
-
+            for ($element = 0; $element <= $total_item_count; $element++) {
+                $displayscore->update_category(0, $element + 1);
+                $customdisplays[] = $displayscore->get_custom_score_display_settings();
+            }
             if (is_array($customdisplays) && count(($customdisplays))) {
 
                 $user_results = $this->datagen->get_data_to_graph2(false);
@@ -207,17 +209,21 @@ class FlatViewTable extends SortableTable
 
                 //@todo when a display custom does not exist the order of the color does not match
                 //filling all the answer that are not responded with 0
-                rsort($customdisplays);
+                foreach($customdisplays as &$displays) {
+                    rsort($displays);
+                }
 
                 if ($total_users > 0) {
+                    $count = -1;
                     foreach ($pre_result2 as $key => $res_array) {
+                        $count++;
                         $key_list = array();
                         foreach ($res_array as $user_result) {
                             $resource_list[$key][$user_result[1]] += 1;
                             $key_list[] = $user_result[1];
                         }
 
-                        foreach ($customdisplays as $display) {
+                        foreach ($customdisplays[$count] as $display) {
                             if (!in_array($display['display'], $key_list))
                                 $resource_list[$key][$display['display']] = 0;
                         }
@@ -228,10 +234,11 @@ class FlatViewTable extends SortableTable
                 //fixing $resource_list        
                 $max = 0;
                 $new_list = array();
+                $count = -1;
                 foreach ($resource_list as $key => $value) {
                     $new_value = array();
-
-                    foreach ($customdisplays as $item) {
+                    $count++;
+                    foreach ($customdisplays[$count] as $item) {
                         if ($value[$item['display']] > $max) {
                             $max = $value[$item['display']];
                         }

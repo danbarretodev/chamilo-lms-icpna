@@ -44,16 +44,16 @@ class ScoreDisplay
     /**
      * Get the instance of this class
      */
-    public static function instance($category_id = 0)
+    public static function instance($category_id = 0, $element = 0)
     {
         static $instance;
         if ($category_id == 0) {
             $category_id = intval($_REQUEST['selectcat']);
         }
         if (!isset ($instance)) {
-            $instance = new ScoreDisplay($category_id);
-        } else {
-            $instance->change_category_id($category_id);
+            $instance = new ScoreDisplay($category_id, $element);
+        } elseif (!empty($category_id) || !empty($element)) {
+            $instance->update_category($category_id, $element);
         }
 
         return $instance;
@@ -91,7 +91,7 @@ class ScoreDisplay
     /**
      * Protected constructor - call instance() to instantiate
      */
-    protected function ScoreDisplay($category_id = 0)
+    protected function ScoreDisplay($category_id = 0, $element = 0)
     {
         if (!empty($category_id)) {
             $this->category_id = $category_id;
@@ -145,7 +145,7 @@ class ScoreDisplay
         if (api_get_setting('teachers_can_change_score_settings') == 'true') {
             //Load course settings
             if ($this->custom_enabled) {
-                $this->custom_display = $this->get_custom_displays($category_id);
+                $this->custom_display = $this->get_custom_displays($category_id, $element);
                 if (count($this->custom_display)> 0) {
                     $this->custom_display_conv = $this->convert_displays($this->custom_display);
                 }
@@ -529,9 +529,10 @@ class ScoreDisplay
     /**
      * Get current custom score display settings
          * @param   int     Gradebook category id
+     * @param int $element For grade_components with elements.
      * @return  array   2-dimensional array - every element contains 3 subelements (id, score, display)
      */
-    private function get_custom_displays($category_id = null)
+    private function get_custom_displays($category_id = null, $element = 0)
     {
         $tbl_category = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
         $tbl_display = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_SCORE_DISPLAY);
@@ -542,25 +543,42 @@ class ScoreDisplay
         } else {
             $category_id = $this->get_current_gradebook_category_id();
         }
+        $element = intval($element);
+        $element_filter = ' AND ctpl.grade_components_element = '.$element;
         $sql = 'SELECT tpl.id, tpl.score, tpl.display, tpl.score_color_percent
             FROM '.$tbl_template.' AS tpl
             INNER JOIN '.$tbl_components_template.'AS ctpl
             ON ctpl.grade_score_display_template_id = tpl.id
             INNER JOIN '.$tbl_category.' AS cat
             ON cat.grade_components_id = ctpl.grade_components_id
-            WHERE cat.id = '.$category_id.' ORDER BY score';
+            WHERE cat.id = '.$category_id.$element_filter.' ORDER BY score';
         $result = Database::query($sql);
         if (Database::num_rows($result) > 0) {
             return Database::store_result($result,'ASSOC');
         } else {
-            $sql = 'SELECT * FROM '.$tbl_display.' WHERE category_id = '.$category_id.' ORDER BY score';
-            $result = Database::query($sql);
+            if ($element != 0) {
+                $element_filter = ' AND ctpl.grade_components_element = 0';
+                $sql = 'SELECT tpl.id, tpl.score, tpl.display, tpl.score_color_percent
+                    FROM '.$tbl_template.' AS tpl
+                    INNER JOIN '.$tbl_components_template.'AS ctpl
+                    ON ctpl.grade_score_display_template_id = tpl.id
+                    INNER JOIN '.$tbl_category.' AS cat
+                    ON cat.grade_components_id = ctpl.grade_components_id
+                    WHERE cat.id = '.$category_id.$element_filter.' ORDER BY score';
+                $result = Database::query($sql);
+            }
             if (Database::num_rows($result) > 0) {
                 return Database::store_result($result,'ASSOC');
             } else {
-                $sql = 'SELECT * FROM '.$tbl_display.' WHERE category_id = '.$this->get_current_gradebook_category_id().' ORDER BY score';
+                $sql = 'SELECT * FROM '.$tbl_display.' WHERE category_id = '.$category_id.' ORDER BY score';
                 $result = Database::query($sql);
-                return Database::store_result($result,'ASSOC');
+                if (Database::num_rows($result) > 0) {
+                    return Database::store_result($result,'ASSOC');
+                } else {
+                    $sql = 'SELECT * FROM '.$tbl_display.' WHERE category_id = '.$this->get_current_gradebook_category_id().' ORDER BY score';
+                    $result = Database::query($sql);
+                    return Database::store_result($result,'ASSOC');
+                }
             }
         }
     }
@@ -616,18 +634,40 @@ class ScoreDisplay
             return ($item1['score'] < $item2['score'] ? -1 : 1);
         }
     }
+
+    /**
+     * Reset category_id to current \Gradebook
+     */
     private function reset_category_id() {
         $this->category_id = $this->get_current_gradebook_category_id();
     }
 
+    /**
+     * @param $category_id
+     */
     private function set_category_id($category_id) {
         $this->category_id = intval($category_id);
     }
-    private function change_category_id($category_id, $can_reset = false) {
+
+    /**
+     * Update category_id and custom_display
+     * @param int $category_id
+     * @param int $element
+     * @param bool $can_reset
+     */
+    public function update_category($category_id = 0, $element = 0, $can_reset = false) {
         if (!empty($category_id)) {
             $this->set_category_id($category_id);
         } elseif ($can_reset) {
             $this->reset_category_id();
+        }
+        if ($this->custom_enabled) {
+            $custom_display = $this->get_custom_displays($this->category_id, $element);
+
+            if (count($this->custom_display)> 0) {
+                $this->custom_display = $custom_display;
+                $this->custom_display_conv = $this->convert_displays($this->custom_display);
+            }
         }
     }
 }
