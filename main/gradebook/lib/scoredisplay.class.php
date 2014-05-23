@@ -483,43 +483,64 @@ class ScoreDisplay
      * @param   int Gradebook category id
      * @return  int Score
      */
-    private function get_score_color_percent($category_id = null)
+    private function get_score_color_percent($category_id = null, $element = 0)
     {
         $tbl_category = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
         $tbl_display = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_SCORE_DISPLAY);
-        $tbl_template = Database :: get_main_table(TABLE_GRADE_SCORE_DISPLAY_TEMPLATE);
         $tbl_components_template = Database :: get_main_table(TABLE_GRADE_COMPONENTS_TEMPLATE);
+        $tbl_template = Database :: get_main_table(TABLE_GRADE_TEMPLATE);
+        $tbl_model_components = Database :: get_main_table(TABLE_GRADE_MODEL_COMPONENTS);
         if (isset($category_id)) {
             $category_id = intval($category_id);
         } else {
             $category_id = $this->get_current_gradebook_category_id();
         }
+        $element = intval($element);
+        $element_filter = ' AND ctpl.grade_components_element = '.$element;
         $sql = 'SELECT tpl.score_color_percent
             FROM '.$tbl_template.' AS tpl
-            INNER JOIN '.$tbl_components_template.'AS ctpl
-            ON ctpl.grade_score_display_template_id = tpl.id
+            INNER JOIN '.$tbl_components_template.' AS ctpl
+            ON ctpl.grade_template_id = tpl.id
+            INNER JOIN '.$tbl_model_components.' AS modcom
+            ON modcom.grade_components_id = ctpl.grade_components_id
             INNER JOIN '.$tbl_category.' AS cat
-            ON cat.grade_components_id = ctpl.grade_components_id
-            WHERE cat.id = '.$category_id.' ORDER BY score';
+            ON cat.grade_model_components_id = modcom.id
+            WHERE cat.id = '.$category_id.$element_filter.' ORDER BY score';
         $result = Database::query($sql);
         $score = 0;
         if (Database::num_rows($result) > 0) {
-            if (Database::num_rows($result) > 0) {
-                $row = Database::fetch_row($result);
-                $score = $row[0];
-            }
+            $row = Database::fetch_row($result);
+            $score = $row[0];
         } else {
-            $sql = 'SELECT score_color_percent FROM '.$tbl_display.' WHERE category_id = '.$category_id.' ORDER BY score';
-            $result = Database::query($sql);
+            if ($element != 0) {
+                $element_filter = ' AND ctpl.grade_components_element = 0';
+                $sql = 'SELECT tpl.score_color_percent
+                    FROM '.$tbl_template.' AS tpl
+                    INNER JOIN '.$tbl_components_template.'AS ctpl
+                    ON ctpl.grade_template_id = tpl.id
+                    INNER JOIN '.$tbl_model_components.'AS modcom
+                    ON modcom.grade_components_id = ctpl.grade_components_id
+                    INNER JOIN '.$tbl_category.' AS cat
+                    ON cat.grade_model_components_id = modcom.id
+                    WHERE cat.id = '.$category_id.$element_filter.' ORDER BY score';
+                $result = Database::query($sql);
+            }
             if (Database::num_rows($result) > 0) {
                 $row = Database::fetch_row($result);
                 $score = $row[0];
             } else {
-                $sql = 'SELECT score_color_percent FROM '.$tbl_display.' WHERE category_id = '.$this->get_current_gradebook_category_id().' ORDER BY score';
+                $sql = 'SELECT score_color_percent FROM '.$tbl_display.' WHERE category_id = '.$category_id.' ORDER BY score';
                 $result = Database::query($sql);
                 if (Database::num_rows($result) > 0) {
                     $row = Database::fetch_row($result);
                     $score = $row[0];
+                } else {
+                    $sql = 'SELECT score_color_percent FROM '.$tbl_display.' WHERE category_id = '.$this->get_current_gradebook_category_id().' ORDER BY score';
+                    $result = Database::query($sql);
+                    if (Database::num_rows($result) > 0) {
+                        $row = Database::fetch_row($result);
+                        $score = $row[0];
+                    }
                 }
             }
         }
@@ -536,8 +557,10 @@ class ScoreDisplay
     {
         $tbl_category = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
         $tbl_display = Database :: get_main_table(TABLE_MAIN_GRADEBOOK_SCORE_DISPLAY);
-        $tbl_template = Database :: get_main_table(TABLE_GRADE_SCORE_DISPLAY_TEMPLATE);
+        $tbl_score = Database :: get_main_table(TABLE_GRADE_SCORE_DISPLAY_TEMPLATE);
         $tbl_components_template = Database :: get_main_table(TABLE_GRADE_COMPONENTS_TEMPLATE);
+        $tbl_template = Database :: get_main_table(TABLE_GRADE_TEMPLATE);
+        $tbl_model_components = Database :: get_main_table(TABLE_GRADE_MODEL_COMPONENTS);
         if (isset($category_id)) {
             $category_id = intval($category_id);
         } else {
@@ -545,12 +568,16 @@ class ScoreDisplay
         }
         $element = intval($element);
         $element_filter = ' AND ctpl.grade_components_element = '.$element;
-        $sql = 'SELECT tpl.id, tpl.score, tpl.display, tpl.score_color_percent
+        $sql = 'SELECT sco.id, sco.score, sco.display, tpl.score_color_percent
             FROM '.$tbl_template.' AS tpl
-            INNER JOIN '.$tbl_components_template.'AS ctpl
-            ON ctpl.grade_score_display_template_id = tpl.id
+            INNER JOIN '.$tbl_score.' AS sco
+            ON sco.grade_template_id = tpl.id
+            INNER JOIN '.$tbl_components_template.' AS ctpl
+            ON ctpl.grade_template_id = tpl.id
+            INNER JOIN '.$tbl_model_components.' AS modcom
+            ON modcom.grade_components_id = ctpl.grade_components_id
             INNER JOIN '.$tbl_category.' AS cat
-            ON cat.grade_components_id = ctpl.grade_components_id
+            ON cat.grade_model_components_id = modcom.id
             WHERE cat.id = '.$category_id.$element_filter.' ORDER BY score';
         $result = Database::query($sql);
         if (Database::num_rows($result) > 0) {
@@ -558,12 +585,16 @@ class ScoreDisplay
         } else {
             if ($element != 0) {
                 $element_filter = ' AND ctpl.grade_components_element = 0';
-                $sql = 'SELECT tpl.id, tpl.score, tpl.display, tpl.score_color_percent
+                $sql = 'SELECT sco.id, sco.score, sco.display, tpl.score_color_percent
                     FROM '.$tbl_template.' AS tpl
-                    INNER JOIN '.$tbl_components_template.'AS ctpl
-                    ON ctpl.grade_score_display_template_id = tpl.id
+                    INNER JOIN '.$tbl_score.' AS sco
+                    ON sco.grade_template_id = tpl.id
+                    INNER JOIN '.$tbl_components_template.' AS ctpl
+                    ON ctpl.grade_template_id = tpl.id
+                    INNER JOIN '.$tbl_model_components.' AS modcom
+                    ON modcom.grade_components_id = ctpl.grade_components_id
                     INNER JOIN '.$tbl_category.' AS cat
-                    ON cat.grade_components_id = ctpl.grade_components_id
+                    ON cat.grade_model_components_id = modcom.id
                     WHERE cat.id = '.$category_id.$element_filter.' ORDER BY score';
                 $result = Database::query($sql);
             }

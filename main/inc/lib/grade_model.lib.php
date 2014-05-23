@@ -17,7 +17,7 @@ require_once 'fckeditor/fckeditor.php';
 class GradeModel extends Model {
     
     var $table;
-    var $columns = array('id', 'name', 'description');
+    var $columns = array('id', 'name', 'description', 'created_at', 'grade_abstract_model_id');
     
 	public function __construct() {
         $this->table =  Database::get_main_table(TABLE_GRADE_MODEL);
@@ -38,7 +38,7 @@ class GradeModel extends Model {
 	public function display() {
 		// action links
 		echo '<div class="actions" style="margin-bottom:20px">';
-        echo '<a href="grade_models.php">'.Display::return_icon('back.png',get_lang('Back'),'','32').'</a>';     	
+        echo '<a href="grade_models.php">'.Display::return_icon('back.png',get_lang('Back'),'','32').'</a>';
 		echo '<a href="'.api_get_self().'?action=add">'.Display::return_icon('add.png',get_lang('Add'),'','32').'</a>';        				
 		echo '</div>';   
         echo Display::grid_html('grade_model');  
@@ -192,22 +192,29 @@ class GradeModel extends Model {
 		return $form;                                
     }
     
-    public function get_components($id) {       
-        $obj = new GradeModelComponents();
+    public function get_components($id) {
+
         if (!empty($id)) {
-            return $obj->get_all(array('where'=> array('grade_model_id = ?' => $id)));                
-        } 
+            $gmc = new GradeModelComponents();
+            $gmc->get_components($id);
+        }
         return null;
     }
         
-    public function save($params, $show_query = false) {        
+    public function save($params, $show_query = false) {
 	    $id = parent::save($params, $show_query);
 	    if (!empty($id)) {            
             foreach ($params['components'] as $component) {                
                 if (!empty($component['title']) && !empty($component['percentage']) && !empty($component['acronym'])) {
-                    $obj = new GradeModelComponents();
-                    $component['grade_model_id'] = $id;
-                    $obj->save($component);
+                    $obj = new GradeComponents();
+                    $gmc = new GradeModelComponents();
+                    $gmc_params = array('grade_model_id' => $id);
+                    $component['grade_abstract_model_id'] = $params['grade_abstract_model_id'];
+                    $component_id = $obj->save($component);
+                    if (!empty($component_id)) {
+                        $gmc_params['grade_component_id'] = $id;
+                        $gmc->save($gmc_params);
+                    }
                 }
             }                            
         }
@@ -220,7 +227,7 @@ class GradeModel extends Model {
         
         if (!empty($params['id'])) {
             foreach ($params['components'] as $component) {   
-                $obj = new GradeModelComponents();
+                $obj = new GradeComponents();
                 $component['grade_model_id'] = $params['id'];
                 if (empty($component['title']) && empty($component['percentage']) && empty($component['acronym'])) {
                     $obj->delete($component['id']);
@@ -270,15 +277,53 @@ class GradeModel extends Model {
     }
 }
 
-class GradeModelComponents extends Model {
+class GradeComponents extends Model {
     var $table;
-    var $columns = array('id', 'title', 'percentage', 'acronym', 'grade_model_id', 'prefix', 'exclusions', 'count_elements');
+    var $columns = array('id', 'title', 'percentage', 'description', 'grade_abstract_model_id', 'parent_id');
     
 	public function __construct() {
-        $this->table =  Database::get_main_table(TABLE_GRADE_MODEL_COMPONENTS);
+        $this->table =  Database::get_main_table(TABLE_GRADE_COMPONENTS);
 	}    
     public function save($params, $show_query = false) {        
-	    $id = parent::save($params, $show_query);  
+	    $id = parent::save($params, $show_query);
+        if (!empty($id)) {
+            $ge = new GradeElements();
+            $params['grade_components_id'] = $id;
+            $ge->save($params);
+        }
         return $id;
+    }
+}
+
+class GradeModelComponents extends Model {
+    var $table;
+    var $columns = array('id', 'grade_components_id', 'grade_model_id');
+
+    public function __construct() {
+        $this->table =  Database::get_main_table(TABLE_GRADE_MODEL_COMPONENTS);
+    }
+    public function save($params, $show_query = false) {
+        $id = parent::save($params, $show_query);
+        return $id;
+    }
+    public function get_components($model_id) {
+        if (!empty($model_id)) {
+            $result = Database::select('id, grade_components_id',$this->table,array('where'=> array('grade_model_id = ?' => $model_id)));
+            if (!empty($result)) {
+                $gc_set = '('.implode(', ', $result).')';
+                $grade_comp = new GradeComponents();
+                return $grade_comp->get_all(array('where'=> array('grade_model_id IN ?' => $gc_set)));
+            }
+        }
+        return null;
+    }
+}
+
+class GradeElements extends Model {
+    var $table;
+    var $columns = array('id','acronym','description','type','prefix','count_elements','exclusions','grade_components_id');
+
+    public function __construct() {
+        $this->table =  Database::get_main_table(TABLE_GRADE_ELEMENTS);
     }
 }

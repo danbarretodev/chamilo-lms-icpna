@@ -839,14 +839,15 @@ class Category implements GradebookItem
         $result = array(0,0);
         $grade_model_id = $this->get_grade_model_id();
         if ($this->get_grade_model_id() != 0 && $mode > 3) {
-            foreach ($args as &$arg) {
+            foreach ($args as $key => &$arg) {
                 $arg = floatval($arg);
+                $weights[$key] = floatval($weights[$key]);
             }
-            $grade_method_table = Database::get_main_table(TABLE_GRADE_MODEL_METHOD);
-            $grade_component_table = Database::get_main_table(TABLE_GRADE_MODEL_COMPONENTS);
+            $grade_method_table = Database::get_main_table(TABLE_GRADE_METHOD);
+            $grade_model_component_table = Database::get_main_table(TABLE_GRADE_MODEL_COMPONENTS);
             $sql = "SELECT formula, weight FROM $grade_method_table AS g_met
-            INNER JOIN $grade_component_table AS g_com
-            ON g_com.id = g_met.grade_components_id
+            INNER JOIN $grade_model_component_table AS g_com
+            ON g_com.grade_components_id = g_met.grade_components_id
             WHERE g_com.grade_model_id = $grade_model_id
             LIMIT 1";
             $res = Database::query($sql);
