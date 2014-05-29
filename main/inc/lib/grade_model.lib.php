@@ -84,16 +84,20 @@ class GradeModel extends Model {
                 
         // Setting the defaults
         
-        $defaults = $this->get($id);        
-                
+        $defaults = $this->get($id);
         $components = $this->get_components($defaults['id']);
-        
         if ($action == 'edit') {
             if (!empty($components)) { 
                 $nr_items = count($components) -1;
             }
         }        
-        
+
+        foreach ($components as $component) {
+            if (empty($component['acronym']) && $component['count_elements'] == 0 && (strpos(strtoupper($component['title']), 'COURSE') !== false) ) {
+                $nr_items--;
+            }
+        }
+
         $form->addElement('hidden', 'maxvalue', '100');
 		$form->addElement('hidden', 'minvalue', '0');
                 
@@ -146,11 +150,11 @@ class GradeModel extends Model {
             $renderer->setElementTemplate($template_acronym, 'components['.$i.'][title]');
             $renderer->setElementTemplate($template_percentage ,  'components['.$i.'][percentage]');
             $renderer->setElementTemplate($template_acronym , 'components['.$i.'][acronym]');
-            
+
             $renderer->setElementTemplate($template_acronym , 'components['.$i.'][prefix]');
             $renderer->setElementTemplate($template_title , 'components['.$i.'][exclusions]');
             $renderer->setElementTemplate($template_count_elements , 'components['.$i.'][count_elements]');
-            
+
             if ($i == 0) {
                 $form->addRule('components['.$i.'][percentage]', get_lang('ThisFieldIsRequired'), 'required');
                 $form->addRule('components['.$i.'][title]', get_lang('ThisFieldIsRequired'), 'required');
@@ -177,14 +181,17 @@ class GradeModel extends Model {
 
         if (!empty($components)) {
             $counter = 0;
-            foreach ($components as $component) {
+            foreach ($components as &$component) {
+                if (empty($component['acronym']) && $component['count_elements'] == 0 && (strpos(strtoupper($component['title']), 'COURSE') !== false) ) {
+                    continue;
+                }
+                $component['id'] = $component['grade_components_id'];
                 foreach ($component as $key => $value) {
                     $defaults['components['.$counter.']['.$key.']'] = $value;
                 }
                 $counter++;
             }
-        }        
-        
+        }
         $form->setDefaults($defaults);
     
         // Setting the rules
@@ -196,23 +203,33 @@ class GradeModel extends Model {
 
         if (!empty($id)) {
             $gmc = new GradeModelComponents();
-            $gmc->get_components($id);
+            return $gmc->get_components($id);
         }
         return null;
     }
         
     public function save($params, $show_query = false) {
 	    $id = parent::save($params, $show_query);
-	    if (!empty($id)) {            
+	    if (!empty($id)) {
+            $gmc = new GradeModelComponents();
+            $gc = new GradeComponents();
+            $gmc_params = array('grade_model_id' => $id);
+            $component_parent_id = $gc->save(array(
+                    'title' => 'COURSE',
+                    'percentage' => 0,
+                    'grade_model_abstract_id' => $params['grade_abstract_model_id'],
+                ));
+            $gmc_params['grade_components_id'] = $component_parent_id;
+            $gmc->save($gmc_params);
             foreach ($params['components'] as $component) {                
                 if (!empty($component['title']) && !empty($component['percentage']) && !empty($component['acronym'])) {
                     $obj = new GradeComponents();
                     $gmc = new GradeModelComponents();
-                    $gmc_params = array('grade_model_id' => $id);
+                    $component['parent_id'] = $component_parent_id;
                     $component['grade_abstract_model_id'] = $params['grade_abstract_model_id'];
                     $component_id = $obj->save($component);
                     if (!empty($component_id)) {
-                        $gmc_params['grade_component_id'] = $id;
+                        $gmc_params['grade_components_id'] = $component_id;
                         $gmc->save($gmc_params);
                     }
                 }
@@ -221,22 +238,39 @@ class GradeModel extends Model {
         //event_system(LOG_CAREER_CREATE, LOG_CAREER_ID, $id, api_get_utc_datetime(), api_get_user_id());   		
    		return $id;
     }
-    
-    public function update($params) {
-        parent::update($params);
-        
-        if (!empty($params['id'])) {
-            foreach ($params['components'] as $component) {   
-                $obj = new GradeComponents();
-                $component['grade_model_id'] = $params['id'];
-                if (empty($component['title']) && empty($component['percentage']) && empty($component['acronym'])) {
-                    $obj->delete($component['id']);
-                } else {
-                    $obj->update($component);
+
+    /**
+     * @param $params
+     * @param int $mode 0:Update Grade model, components, elements and methods
+     *                  1:Clone with changes Grade model, components, elements and methods
+     * @return bool|void
+     */
+    public function update($params, $mode = 1) {
+        switch ($mode) {
+            case 0:
+                parent::update($params);
+                if (!empty($params['id'])) {
+                    foreach ($params['components'] as $component) {
+                        $obj = new GradeComponents();
+                        if (empty($component['title']) && empty($component['percentage']) && empty($component['acronym'])) {
+                            $obj->delete($component['id']);
+                        } else {
+                            $obj->update($component);
+                        }
+                    }
                 }
-            }
-        }        
-        //$params['components']
+                break;
+            case 1:
+                $base_gm = $this->get($params['id']);
+                //$params = array_merge($base_gm, $base_gm);
+                $params['id'] = '';
+                $params['grade_abstract_model_id'] = $base_gm['grade_abstract_model_id'];
+                foreach($params['components'] as &$component) {
+                    $component['id'] = '';
+                }
+                $id = $this->save($params);
+                break;
+        }
     }
     
     public function delete($id) {
@@ -277,24 +311,6 @@ class GradeModel extends Model {
     }
 }
 
-class GradeComponents extends Model {
-    var $table;
-    var $columns = array('id', 'title', 'percentage', 'description', 'grade_abstract_model_id', 'parent_id');
-    
-	public function __construct() {
-        $this->table =  Database::get_main_table(TABLE_GRADE_COMPONENTS);
-	}    
-    public function save($params, $show_query = false) {        
-	    $id = parent::save($params, $show_query);
-        if (!empty($id)) {
-            $ge = new GradeElements();
-            $params['grade_components_id'] = $id;
-            $ge->save($params);
-        }
-        return $id;
-    }
-}
-
 class GradeModelComponents extends Model {
     var $table;
     var $columns = array('id', 'grade_components_id', 'grade_model_id');
@@ -308,14 +324,59 @@ class GradeModelComponents extends Model {
     }
     public function get_components($model_id) {
         if (!empty($model_id)) {
-            $result = Database::select('id, grade_components_id',$this->table,array('where'=> array('grade_model_id = ?' => $model_id)));
+            $result = Database::select('grade_components_id',$this->table,array('where'=> array('grade_model_id = ?' => $model_id)));
             if (!empty($result)) {
-                $gc_set = '('.implode(', ', $result).')';
-                $grade_comp = new GradeComponents();
-                return $grade_comp->get_all(array('where'=> array('grade_model_id IN ?' => $gc_set)));
+                $gc_set = '(';
+                foreach ($result as $key => $res) {
+                    if ($key == 0) {
+                        //nothing to do
+                    } else {
+                        $gc_set .= ', ';
+                    }
+                    $gc_set .= current($res);
+                }
+                $gc_set .= ')';
+                $gc = new GradeComponents();
+                $ge = new GradeElements();
+                $components = $gc->get_all(array('where'=> array('id IN '.$gc_set.' AND id != ?' => '0')));
+                $elements = $ge->get_all(array('where'=> array('grade_components_id IN '.$gc_set.' AND id != ?' => '0')));
+                foreach ($elements as $element) {
+                    $components[$element['grade_components_id']] = array_merge($components[$element['grade_components_id']], $element);
+                }
+                return $components;
             }
         }
         return null;
+    }
+}
+
+class GradeComponents extends Model {
+    var $table;
+    var $columns = array('id', 'title', 'percentage', 'description', 'grade_abstract_model_id', 'parent_id');
+    
+	public function __construct() {
+        $this->table =  Database::get_main_table(TABLE_GRADE_COMPONENTS);
+	}
+
+    public function save($params, $show_query = false) {        
+	    $id = parent::save($params, $show_query);
+        if (!empty($id) && !empty($params['acronym'])) {
+            $ge = new GradeElements();
+            $params['grade_components_id'] = $id;
+            $ge->save($params);
+        }
+        return $id;
+    }
+
+    public function update($params) {
+        parent::update($params);
+        $ge = new GradeElements();
+        $ge_all = $ge->get_all(array('where' => array('grade_components_id = ?' => $params['id'])));
+        $params['grade_components_id'] = $params['id'];
+        foreach ($ge_all as $ge_item) {
+            $params['id'] = $ge_item['id'];
+            $ge->update($params);
+        }
     }
 }
 
@@ -325,5 +386,14 @@ class GradeElements extends Model {
 
     public function __construct() {
         $this->table =  Database::get_main_table(TABLE_GRADE_ELEMENTS);
+    }
+}
+
+class GradeAbstractModel extends Model {
+    var $table;
+    var $columns = array('id', 'name', 'description', 'created_at');
+
+    public function __construct() {
+        $this->table =  Database::get_main_table(TABLE_GRADE_ABSTRACT_MODEL);
     }
 }

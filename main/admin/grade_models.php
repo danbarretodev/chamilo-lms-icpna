@@ -105,6 +105,8 @@ $(function() {
 });
 </script>
 <?php
+require_once api_get_path(LIBRARY_PATH).'/grade_model.lib.php';
+$gam = new GradeAbstractModel();
 $obj = new GradeModel();
 
 // Action handling: Add
@@ -121,9 +123,13 @@ switch ($action) {
         
         // The validation or display
         if ($form->validate()) {            
-            if ($check) {     
+            if ($check) {
                 $values = $form->exportValues();
-                $res    = $obj->save($values);            
+                $values['created_at'] = new \DateTime('now');
+                $gam_id = $gam->save($values);
+                $gam_id = intval($gam_id);
+                $values['grade_abstract_model_id'] = $gam_id;
+                $res    = $obj->save($values);
                 if ($res) {
                     Display::display_confirmation_message(get_lang('ItemAdded'));
                 }
@@ -141,13 +147,25 @@ switch ($action) {
     case 'edit':
         // Action handling: Editing 
         $url  = api_get_self().'?action='.Security::remove_XSS($_GET['action']).'&id='.intval($_GET['id']);
-        $form = $obj->return_form($url, 'edit');    
+        $form = $obj->return_form($url, 'edit');
 
         // The validation or display
         if ($form->validate()) {            
             if ($check) {
-                $values = $form->exportValues();                
-                $res    = $obj->update($values);
+                $values = $form->exportValues();
+                $gmc = new GradeModelComponents();
+                $result = $gmc->get_all(array('where'=>array('grade_model_id = ?' => $values['id'], 'grade_components_id = ?' => current($values['components'])['parent_id'])));
+                $gmc_id = current($result)['id'];
+                $category_table = Database::get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
+                $sql = "SELECT COUNT(*) FROM $category_table WHERE grade_model_components_id = $gmc_id";
+                $res = Database::query($sql);
+                $row = Database::fetch_row($res);
+                if (intval($row[0]) > 0) {
+                    $values['created_at'] = new \DateTime('now');
+                    $res    = $obj->update($values, 1);
+                } else {
+                    $res    = $obj->update($values, 0);
+                }
                 Display::display_confirmation_message(get_lang('ItemUpdated'), false);                
             }            
             $obj->display();
