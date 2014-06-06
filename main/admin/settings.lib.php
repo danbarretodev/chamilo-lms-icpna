@@ -1066,7 +1066,9 @@ function select_gradebook_default_grade_model_id() {
     $options[-1] = get_lang('None');
     if (!empty($models)) {
         foreach ($models as $model) {
-            $options[$model['id']] = $model['name'];
+            $gmc = new GradeModelComponents();
+            $model_id = $gmc->get_course_model_components_id($model['id']);
+            $options[$model_id] = $model['name'];
         }
     }
     return $options;

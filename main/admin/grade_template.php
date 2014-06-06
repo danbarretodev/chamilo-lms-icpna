@@ -31,13 +31,13 @@ $check = Security::check_token('request');
 $token = Security::get_token();    
 
 if ($action == 'add') {    
-    $interbreadcrumb[]=array('url' => 'grade_models.php','name' => get_lang('GradeModel'));
+    $interbreadcrumb[]=array('url' => 'grade_template.php','name' => get_lang('GradeTemplate'));
     $interbreadcrumb[]=array('url' => '#','name' => get_lang('Add'));
 } elseif ($action == 'edit') {
-    $interbreadcrumb[]=array('url' => 'grade_models.php','name' => get_lang('GradeModel'));
+    $interbreadcrumb[]=array('url' => 'grade_template.php','name' => get_lang('GradeTemplate'));
     $interbreadcrumb[]=array('url' => '#','name' => get_lang('Edit'));
 } else {
-    $interbreadcrumb[]=array('url' => '#','name' => get_lang('GradeModel'));
+    $interbreadcrumb[]=array('url' => '#','name' => get_lang('GradeTemplate'));
 }
 
 $htmlHeadXtra[]= '<script>
@@ -73,22 +73,22 @@ function minItem(item) {
 Display::display_header($tool_name);
 
 //jqgrid will use this URL to do the selects
-$url            = api_get_path(WEB_AJAX_PATH).'model.ajax.php?a=get_grade_models';
+$url            = api_get_path(WEB_AJAX_PATH).'model.ajax.php?a=get_grade_template';
 
-//The order is important you need to check the the $column variable in the model.ajax.php file 
-$columns        = array(get_lang('Name'), get_lang('Description'), get_lang('Actions'));
+//The order is important you need to check the the $column variable in the model.ajax.php file
+$columns        = array(get_lang('Name'), get_lang('Description'), get_lang('ScoreColorPercent'), get_lang('Actions'));
 
 //Column config
 $column_model   = array(
-                        array('name'=>'name',           'index'=>'name',        'width'=>'80',   'align'=>'left'),
-                        array('name'=>'description',    'index'=>'description', 'width'=>'500',  'align'=>'left','sortable'=>'false'),
-                        array('name'=>'actions',        'index'=>'actions',     'width'=>'100',  'align'=>'left','formatter'=>'action_formatter','sortable'=>'false')
+                        array('name'=>'name',                   'index'=>'name',                'width'=>'80',      'align'=>'left'),
+                        array('name'=>'description',            'index'=>'description',         'width'=>'450',     'align'=>'left','sortable'=>'false'),
+                        array('name'=>'score_color_percent',    'index'=>'score_color_percent', 'width'=>'50',      'align'=>'left','sortable'=>'true'),
+                        array('name'=>'actions',                'index'=>'actions',             'width'=>'100',     'align'=>'left','formatter'=>'action_formatter','sortable'=>'false')
                        );            
 //Autowidth             
 $extra_params['autowidth'] = 'true';
 //height auto 
-$extra_params['height'] = 'auto'; 
-
+$extra_params['height'] = 'auto';
 //With this function we can add actions to the jgrid (edit, delete, etc)
 $action_links = 'function action_formatter(cellvalue, options, rowObject) {
                          return \'<a href="?action=edit&id=\'+options.rowId+\'">'.Display::return_icon('edit.png',get_lang('Edit'),'',ICON_SIZE_SMALL).'</a>'.                         
@@ -98,16 +98,16 @@ $action_links = 'function action_formatter(cellvalue, options, rowObject) {
 ?>
 <script>
 $(function() {
-<?php 
+<?php
     // grid definition see the $obj->display() function
-    echo Display::grid_js('grade_model',  $url, $columns, $column_model, $extra_params, array(), $action_links,true);       
-?> 
+    echo Display::grid_js('grade_template',  $url, $columns, $column_model, $extra_params, array(), $action_links,true);
+?>
 });
 </script>
 <?php
 require_once api_get_path(LIBRARY_PATH).'/grade_model.lib.php';
 $gam = new GradeAbstractModel();
-$obj = new GradeModel();
+$obj = new GradeTemplate();
 
 // Action handling: Add
 switch ($action) {
@@ -120,15 +120,10 @@ switch ($action) {
         $form = $obj->return_form($url, 'add');
         
         
-        
         // The validation or display
         if ($form->validate()) {            
             if ($check) {
                 $values = $form->exportValues();
-                $values['created_at'] = new \DateTime('now');
-                $gam_id = $gam->save($values);
-                $gam_id = intval($gam_id);
-                $values['grade_abstract_model_id'] = $gam_id;
                 $res    = $obj->save($values);
                 if ($res) {
                     Display::display_confirmation_message(get_lang('ItemAdded'));
@@ -153,29 +148,9 @@ switch ($action) {
         if ($form->validate()) {            
             if ($check) {
                 $values = $form->exportValues();
-
-                // Obtain current grade_model_components_id of COURSE component
-                $gmc = new GradeModelComponents();
-                $result = $gmc->get_all(array('where'=>array('grade_model_id = ?' => $values['id'], 'grade_components_id = ?' => current($values['components'])['parent_id'])));
-                $gmc_id = current($result)['id'];
-
-                // Count categories with same grade_model_components_id
-                $category_table = Database::get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
-                $sql = "SELECT COUNT(*) FROM $category_table WHERE grade_model_components_id = $gmc_id";
-                $res = Database::query($sql);
-                $row = Database::fetch_row($res);
-
-                if (intval($row[0]) > 0) {
-                    // If exist at least one, then clone to a new version
-                    $values['created_at'] = new \DateTime('now');
-                    $res    = $obj->update($values, 1);
-                    Display::display_confirmation_message(get_lang('ItemCloned'), false);
-                } else {
-                    // Else just normal update
-                    $res    = $obj->update($values, 0);
-                    Display::display_confirmation_message(get_lang('ItemUpdated'), false);
+                $res    = $obj->update($values);
+                Display::display_confirmation_message(get_lang('ItemUpdated'), false);
                 }
-            }            
             $obj->display();
         } else {
             echo '<div class="actions">';
@@ -189,7 +164,7 @@ switch ($action) {
     case 'delete':
         // Action handling: delete
         if ($check) {
-            $res = $obj->delete($_GET['id']);
+            $res = $obj->delete(intval($_GET['id']));
             if ($res) {
                 Display::display_confirmation_message(get_lang('ItemDeleted'));
             }
@@ -197,7 +172,7 @@ switch ($action) {
         $obj->display();
         break;   
     default:
-        $obj->display();   
+        $obj->display();
         break;
 }
 Display :: display_footer();

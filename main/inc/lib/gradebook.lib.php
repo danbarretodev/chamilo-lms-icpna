@@ -11,7 +11,7 @@
    
 class Gradebook extends Model {    
 
-    public $columns = array('id', 'name', 'description', 'course_code', 'parent_id', 'grade_model_id', 'session_id', 'weight', 'user_id');
+    public $columns = array('id', 'name', 'description', 'course_code', 'parent_id', 'grade_model_id', 'session_id', 'weight', 'user_id', 'grade_model_components_id');
 
     
     public function __construct() {

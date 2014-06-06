@@ -146,7 +146,6 @@ if ((isset($_GET['selectcat']) && $_GET['selectcat']>0) && (isset($_SESSION['stu
 	if (!isset($_GET['selectcat']) && ($_SESSION['studentview']=='studentview') || (isset($_GET['isStudentView']) && $_GET['isStudentView']=='true') ) {
 		//	if ( !isset($_GET['selectcat']) && ($_SESSION['studentview']=='studentview') && ($status<>1 && !api_is_platform_admin()) || (isset($_GET['isStudentView']) && $_GET['isStudentView']=='true' && $status<>1 && !api_is_platform_admin()) ) {
 		Display :: display_header(get_lang('Gradebook'));
-
 		//Introduction tool: student view
 		Display::display_introduction_section(TOOL_GRADEBOOK, array('ToolbarSet' => 'AssessmentsIntroduction'));
 		$addparams=array();
@@ -765,12 +764,14 @@ if (isset($first_time) && $first_time==1 && api_is_allowed_to_edit(null,true)) {
 
             // Getting grade models.
             $obj = new GradeModel();
+            $gmc = new GradeModelComponents();
             $grade_models = $obj->get_all();
-            $grade_model_id = $cats[0]->get_grade_model_id();
+            $grade_model_components_id = $cats[0]->get_grade_model_id();
+            $grade_model_id = $gmc->get_model_id($grade_model_components_id);
 
             // No children.
-            if ((count($cats) == 1 && empty($grade_model_id)) ||
-                (count($cats) == 1 && $grade_model_id != -1)
+            if ((count($cats) == 1 && empty($grade_model_components_id)) ||
+                (count($cats) == 1 && $grade_model_components_id != -1)
             ) {
                 if (!empty($grade_models)) {
                     $form_grade = new FormValidator('grade_model_settings');
@@ -778,16 +779,18 @@ if (isset($first_time) && $first_time==1 && api_is_allowed_to_edit(null,true)) {
                     $form_grade->addElement('style_submit_button', 'submit', get_lang('Save'), 'class="save"');
 
                     if ($form_grade->validate()) {
-                        $value = $form_grade->exportValue('grade_model_id');
-
+                        $value = intval($form_grade->exportValue('grade_model_id'));
                         $gradebook = new Gradebook();
-                        $gradebook->update(array('id'=> $cats[0]->get_id(), 'grade_model_id' => $value), true);
+                        $gradebook->update(array('id'=> $cats[0]->get_id(), 'grade_model_components_id' => $value), true);
 
                         //do something
-                        $obj = new GradeModel();
-                        $components = $obj->get_components($value);
 
+                        $model_id = $gmc->get_model_id($value);
+                        $components = $obj->get_components($model_id);
                         foreach ($components as $component) {
+                            if (!isset($component['acronym'])) {
+                                continue;
+                            }
                             $gradebook =  new Gradebook();
                             $params = array();
 
@@ -798,13 +801,15 @@ if (isset($first_time) && $first_time==1 && api_is_allowed_to_edit(null,true)) {
                             $params['weight']           = $component['percentage'];
                             $params['session_id']       = api_get_session_id();
                             $params['course_code']      = api_get_course_id();
-                            $params['grade_model_id']   = api_get_session_id();
+                            $params['grade_model_components_id']   = $component['gmc_id'];
 
                             $gradebook_id = $gradebook->save($params);
 
                             $count_elements = intval($component['count_elements']);
                             $exclude_elements = intval($component['exclusions']);
                             $eval_weight = round(abs($params['weight'] / ($count_elements - $exclude_elements)));
+
+                            $now_datetime = new \DateTime('now');
 
                             for ($i = 1; $i <= $count_elements; $i++) {
                                 $eval = new Evaluation();
@@ -816,9 +821,10 @@ if (isset($first_time) && $first_time==1 && api_is_allowed_to_edit(null,true)) {
                                 $eval->set_course_code($params['course_code']);
                                 $eval->set_category_id($gradebook_id);
 
+                                $eval->set_date($now_datetime);
+
                                 $eval->set_weight($eval_weight);
                                 $eval->set_max($params['weight']);
-
                                 $eval->set_visible(1);
                                 $eval->add();
                             }
@@ -865,7 +871,7 @@ if (isset($first_time) && $first_time==1 && api_is_allowed_to_edit(null,true)) {
                     }
 				}
 				$gradebooktable = new GradebookTable($cat, $allcat, $alleval, $alllink, $addparams);
-				$gradebooktable->display();
+                $gradebooktable->display();
 			}
 		}
 	}

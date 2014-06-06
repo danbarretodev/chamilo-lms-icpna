@@ -392,7 +392,7 @@ class Category implements GradebookItem
             }
 
             if (isset($this->grade_model_id)) {
-                $sql .= ', grade_model_id ';
+                $sql .= ', grade_model_components_id ';
             }
             if (isset($this->certificate_min_score) && !empty($this->certificate_min_score)) {
                 $sql .= ', certif_min_score ';
@@ -432,6 +432,7 @@ class Category implements GradebookItem
                 $sql .= ', '.Database::escape_string($this->get_certificate_min_score());
             }
             $sql .= ')';
+            //var_dump($sql);
             Database::query($sql);
             $id = Database::insert_id();
             $this->set_id($id);
@@ -439,7 +440,9 @@ class Category implements GradebookItem
             if (!empty($id)) {
 
                 $parent_id = $this->get_parent_id();
-                $grade_model_id = $this->get_grade_model_id();
+                $grade_model_components_id = $this->get_grade_model_id();
+                $gmc = new GradeModelComponents();
+                $grade_model_id = $gmc->get_model_id($grade_model_components_id);
                 if ($parent_id == 0) {
                     //do something
                     if (isset($grade_model_id) && !empty($grade_model_id) && $grade_model_id != '-1') {
@@ -451,6 +454,9 @@ class Category implements GradebookItem
                             $default_weight = $default_weight_setting;
                         }
                         foreach ($components as $component) {
+                            if (!isset($component['acronym'])) {
+                                continue;
+                            }
                             $gradebook =  new Gradebook();
                             $params = array();
 
@@ -461,12 +467,15 @@ class Category implements GradebookItem
                             $params['weight']           = $component['percentage']/100*$default_weight;
                             $params['session_id']       = api_get_session_id();
                             $params['course_code']      = $this->get_course_code();
+                            $params['grade_model_components_id']   = $component['gmc_id'];
 
                             $gradebook_id = $gradebook->save($params);
 
                             $count_elements = intval($component['count_elements']);
                             $exclude_elements = intval($component['exclusions']);
                             $eval_weight = round(abs($params['weight'] / ($count_elements - $exclude_elements)));
+
+                            $now_datetime = new \DateTime('now');
 
                             for ($i = 1; $i <= $count_elements; $i++) {
                                 $eval = new Evaluation();
@@ -477,6 +486,8 @@ class Category implements GradebookItem
                                 //Always add the gradebook to the course
                                 $eval->set_course_code($params['course_code']);
                                 $eval->set_category_id($gradebook_id);
+
+                                $eval->set_date($now_datetime);
 
                                 $eval->set_weight($eval_weight);
                                 $eval->set_max($params['weight']);
@@ -530,7 +541,7 @@ class Category implements GradebookItem
             $sql .= 'null';
         }
         if (isset($this->grade_model_id)) {
-            $sql .= ', grade_model_id = '.intval($this->get_grade_model_id());
+            $sql .= ', grade_model_components_id = '.intval($this->get_grade_model_id());
         }
         $sql .= ', weight = '.Database::escape_string($this->get_weight())
             .', visible = '.intval($this->is_visible())
@@ -540,7 +551,9 @@ class Category implements GradebookItem
 
         if (!empty($this->id)) {
             $parent_id = $this->get_parent_id();
-            $grade_model_id = $this->get_grade_model_id();
+            $grade_model_components_id = $this->get_grade_model_id();
+            $gmc = new GradeModelComponents();
+            $grade_model_id = $gmc->get_model_id($grade_model_components_id);
             if ($parent_id == 0) {
 
                 if (isset($grade_model_id) && !empty($grade_model_id) && $grade_model_id != '-1') {
@@ -556,6 +569,9 @@ class Category implements GradebookItem
                         $default_weight = $this->get_weight();
                     }
                     foreach ($components as $component) {
+                        if (!isset($component['acronym'])) {
+                            continue;
+                        }
                         $gradebook = new Gradebook();
                         $params = array();
 
@@ -573,6 +589,8 @@ class Category implements GradebookItem
                         $exclude_elements = intval($component['exclusions']);
                         $eval_weight = round(abs($params['weight'] / ($count_elements - $exclude_elements)));
 
+                        $now_datetime = new \DateTime('now');
+
                         for ($i = 1; $i <= $count_elements; $i++) {
                             $eval = new Evaluation();
                             $eval->set_name($component['prefix'] . $i);
@@ -582,6 +600,8 @@ class Category implements GradebookItem
                             //Always add the gradebook to the course
                             $eval->set_course_code($params['course_code']);
                             $eval->set_category_id($gradebook_id);
+
+                            $eval->set_date($now_datetime);
 
                             $eval->set_weight($eval_weight);
                             $eval->set_max($params['weight']);

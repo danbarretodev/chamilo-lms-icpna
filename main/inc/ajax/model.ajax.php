@@ -6,6 +6,7 @@
 $language_file = array('admin', 'exercice', 'gradebook', 'tracking');
 
 require_once '../global.inc.php';
+require_once api_get_path(LIBRARY_PATH).'/grade_model.lib.php';
 
 $libpath = api_get_path(LIBRARY_PATH);
 
@@ -260,6 +261,10 @@ switch ($action) {
         break;
     case 'get_grade_models':
         $obj        = new GradeModel();
+        $count      = $obj->get_count();
+        break;
+    case 'get_grade_template':
+        $obj        = new GradeTemplate();
         $count      = $obj->get_count();
         break;
     case 'get_usergroups':
@@ -525,6 +530,18 @@ switch ($action) {
         }
         $result = $new_result;
         break;
+    case 'get_grade_template':
+        $columns = array('name', 'description', 'score_color_percent','actions');
+        if (!in_array($sidx, $columns)) {
+            $sidx = 'name';
+        }
+        $result     = Database::select('*', "$obj->table ", array('order' =>"$sidx $sord", 'LIMIT'=> "$start , $limit"));
+        $new_result = array();
+        foreach($result as $item) {
+            $new_result[] = $item;
+        }
+        $result = $new_result;
+        break;
     case 'get_usergroups':
         $columns = array('name', 'users', 'courses', 'sessions', 'actions');
         $result     = Database::select('*', $obj->table, array('order'=>"name $sord", 'LIMIT'=> "$start , $limit"));
@@ -633,6 +650,7 @@ $allowed_actions = array(
     'get_work_user_list',
     'get_timelines',
     'get_grade_models',
+    'get_grade_template',
     'get_event_email_template',
     'get_user_skill_ranking',
     'get_extra_fields',
