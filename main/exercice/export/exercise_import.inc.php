@@ -39,13 +39,14 @@ function tempdir($dir, $prefix = 'tmp', $mode = 0777)
 
 function get_and_unzip_uploaded_exercise($baseWorkDir, $uploadPath)
 {
+    var_dump($baseWorkDir.' ->>> '. $uploadPath);
     global $_course, $_user;
     //Check if the file is valid (not to big and exists)
     if (!isset ($_FILES['userFile']) || !is_uploaded_file($_FILES['userFile']['tmp_name'])) {
         // upload failed
         return false;
     }
-    if (preg_match('/.zip$/i', $_FILES['userFile']['name']) && FileManager::handle_uploaded_document(
+    if (preg_match('/.zip$/i', $_FILES['userFile']['name']) && handle_uploaded_document(
         $_course,
         $_FILES['userFile'],
         $baseWorkDir,
@@ -123,8 +124,10 @@ function import_exercise($file)
     $file_found = false;
     $operation = false;
     $result = false;
+    var_dump($baseWorkDir);
     // parse every subdirectory to search xml question files
     while (false !== ($file = readdir($exerciseHandle))) {
+        var_dump($file);
         if (is_dir($baseWorkDir.'/'.$file) && $file != "." && $file != "..") {
             //find each manifest for each question repository found
             $questionHandle = opendir($baseWorkDir.'/'.$file);
@@ -135,8 +138,10 @@ function import_exercise($file)
                 }
             }
         } elseif (preg_match('/.xml$/i', $file)) {
+            var_dump($exercise_info);
             $result = parse_file($baseWorkDir, '', $file);
             $file_found = true;
+            var_dump($exercise_info);
         } // else ignore file
     }
     if (!$file_found) {
@@ -188,7 +193,7 @@ function import_exercise($file)
             $answer->save();
         }
         // delete the temp dir where the exercise was unzipped
-        FileManager::my_delete($baseWorkDir.$uploadPath);
+        my_delete($baseWorkDir.$uploadPath);
         $operation = true;
     }
 

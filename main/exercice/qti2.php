@@ -76,7 +76,7 @@ function ch_qti2_import_file($array_file)
         require_once $main_path.'exercice/export/qti2/qti2_classes.php';
         $imported = import_exercise($array_file['name']);
         if ($imported) {
-            header('Location: exercice.php?'.api_get_cidreq());
+            Display::display_normal_message(get_lang('FileUpload'));
         } else {
             Display::display_error_message(get_lang('UplNoFileUploaded'));
 
